@@ -2,18 +2,17 @@ const express = require("express");
 const multer = require("multer");
 const ExcelJS = require("exceljs");
 const cors = require("cors");
-const path = require("path");
-const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const PASSWORD = "LeagueTeam2025";
 
+let leaderboardData = []; // Store leaderboard data in memory
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public")); // Serve static files
 
 // Root route with password form
 app.get("/", (req, res) => {
@@ -55,10 +54,10 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     await workbook.xlsx.load(req.file.buffer);
     const worksheet = workbook.worksheets[0]; // Read first sheet
 
-    let jsonData = [];
+    leaderboardData = []; // Reset stored data
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return; // Skip header row
-      jsonData.push({
+      leaderboardData.push({
         gamer_name: row.getCell(1).value,
         league: row.getCell(2).value,
         maps: row.getCell(3).value,
@@ -68,10 +67,15 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       });
     });
 
-    res.json({ message: "File processed successfully", data: jsonData });
+    res.json({ message: "File processed successfully", data: leaderboardData });
   } catch (error) {
     res.status(500).json({ message: "Error processing file", error });
   }
+});
+
+// New Route to Serve Leaderboard Data
+app.get("/leaderboard", (req, res) => {
+  res.json(leaderboardData);
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
